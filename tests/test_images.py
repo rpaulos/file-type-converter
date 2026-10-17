@@ -76,3 +76,20 @@ def test_formats_with_transparency_keep_it(logo, target):
     with Image.open(dst) as img:
         assert img.mode == "RGBA"
         assert img.getpixel((30, 15))[3] == 0  # alpha is still 0 = invisible
+
+
+@pytest.fixture
+def phone_photo(tmp_path):
+    """A 40x30 JPG whose EXIF says 'rotate 90° clockwise when showing it'."""
+    src = tmp_path / "phone.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6          # 0x0112 = the Orientation tag, 6 = rotate 90° clockwise
+    Image.new("RGB", (40, 30), (0, 0, 255)).save(src, exif=exif)
+    return src
+
+
+@pytest.mark.parametrize("target", ["png", "webp", "bmp"])
+def test_phone_photos_stay_upright(phone_photo, target):
+    dst = convert(phone_photo, target)
+    with Image.open(dst) as img:
+        assert img.size == (30, 40)   # rotated: portrait, not landscape

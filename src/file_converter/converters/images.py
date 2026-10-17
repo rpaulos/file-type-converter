@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from ..registry import normalize_ext, register
 
@@ -26,6 +26,7 @@ def flatten(img: Image.Image) -> Image.Image:
 def convert_image(src: Path, dst: Path) -> None:
     target = normalize_ext(dst.suffix)
     with Image.open(src) as img:
+        img = ImageOps.exif_transpose(img)  # respect EXIF orientation
         if target in NO_ALPHA:
             img = flatten(img)
         img.save(dst)
