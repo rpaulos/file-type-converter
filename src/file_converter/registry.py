@@ -86,3 +86,22 @@ def common_targets(paths) -> list[str]:
 
     # keep only the formats that appear in every file's set
     return sorted(set.intersection(*sets))
+
+
+def output_path(src, target_ext: str, out_dir=None) -> Path:
+    src = Path(src)
+
+    if out_dir is None:
+        out_dir = src.parent
+    else:
+        out_dir = Path(out_dir)
+
+    ext = normalize_ext(target_ext)
+    dst = out_dir / src.with_suffix(f".{ext}").name
+
+    n = 0
+    while dst.exists():
+        n += 1
+        dst = out_dir / f"{src.stem} ({n}).{ext}"
+
+    return dst

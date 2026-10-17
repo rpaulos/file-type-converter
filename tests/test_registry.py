@@ -9,6 +9,7 @@ from file_converter.registry import (
     ConversionError,
     common_targets,
     normalize_ext,
+    output_path,
     register,
     targets_for,
 )
@@ -179,3 +180,41 @@ def test_common_targets_mixed_types_share_nothing():
 
 def test_common_targets_empty_list():
     assert common_targets([]) == []
+
+def test_output_path_next_to_source(tmp_path):
+    src = tmp_path / "photo.png"
+    assert output_path(src, "jpg") == tmp_path / "photo.jpg"
+
+
+def test_output_path_accepts_a_string(tmp_path):
+    src = str(tmp_path / "photo.png")
+    assert output_path(src, "jpg") == tmp_path / "photo.jpg"
+
+
+def test_output_path_normalizes_extension(tmp_path):
+    src = tmp_path / "photo.png"
+    assert output_path(src, ".JPEG") == tmp_path / "photo.jpg"
+
+
+def test_output_path_never_overwrites(tmp_path):
+    src = tmp_path / "photo.png"
+    (tmp_path / "photo.jpg").touch()
+    assert output_path(src, "jpg") == tmp_path / "photo (1).jpg"
+
+
+def test_output_path_keeps_counting(tmp_path):
+    src = tmp_path / "photo.png"
+    (tmp_path / "photo.jpg").touch()
+    (tmp_path / "photo (1).jpg").touch()
+    assert output_path(src, "jpg") == tmp_path / "photo (2).jpg"
+
+
+def test_output_path_custom_folder(tmp_path):
+    src = tmp_path / "photo.png"
+    out = tmp_path / "converted"
+    assert output_path(src, "jpg", out) == out / "photo.jpg"
+
+
+def test_output_path_does_not_create_the_file(tmp_path):
+    src = tmp_path / "photo.png"
+    assert not output_path(src, "jpg").exists()
