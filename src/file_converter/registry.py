@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-ALIASES = {"jpeg": "jpg", "tif": "tiff"}
+ALIASES = {"jpeg": "jpg", "tif": "tiff", "htm": "html", "markdown": "md"}
 
 
 def normalize_ext(ext: str) -> str:
