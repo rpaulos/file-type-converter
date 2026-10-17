@@ -179,17 +179,19 @@ and the repo is visible on GitHub.
 
 **Goal:** convert between CSV, TSV, XLSX and JSON.
 
-- [ ] `read_table(path)` → pandas `DataFrame` (CSV, TSV with `sep="\t"`, XLSX first sheet, JSON)
-- [ ] `write_table(df, path)` — always `index=False`; JSON as a list of records with `indent=2`
-- [ ] **JSON shapes to handle:**
+- [X] `read_table(path)` → pandas `DataFrame` (CSV, TSV with `sep="\t"`, XLSX first sheet, JSON)
+- [X] `write_table(df, path)` — always `index=False`; JSON as a list of records with `indent=2`
+- [X] **JSON shapes to handle:**
   - list of objects → one row per object
   - nested objects → flattened columns like `owner.name` (`pd.json_normalize`)
   - `{"col": [...], "col2": [...]}` → columns
   - a single object → one row
   - anything else (e.g. just a number) → `ConversionError` with a clear message
-- [ ] Register it with the registry
-- [ ] Tests: **round trips** — CSV → XLSX → CSV gives back identical rows; same for TSV and JSON;
+- [X] Register it with the registry
+- [X] Tests: **round trips** — CSV → XLSX → CSV gives back identical rows; same for TSV and JSON;
       nested JSON flattens correctly; bad JSON fails without leaving a file behind
+- [X] Extra: CSVs from older Excel (cp1252) can be read; CSV output opens in Excel with accents intact;
+      Excel dates become readable ISO dates in JSON
 
 **Done when:** all round-trip tests pass.
 
