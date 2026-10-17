@@ -6,6 +6,7 @@ from typing import Callable
 
 ALIASES = {"jpeg": "jpg", "tif": "tiff"}
 
+
 def normalize_ext(ext: str) -> str:
     """'.JPG' -> 'jpg', 'jpeg' -> 'jpg', 'tif' -> 'tiff'."""
 
@@ -37,3 +38,23 @@ class Converter:
     func: Callable[[Path, Path], None]
     is_available: Callable[[], bool] = always_available
 
+_converters: list["Converter"] = []
+
+def register(
+    name: str,
+    inputs: list[str],
+    outputs: list[str],
+    is_available: Callable[[], bool] = always_available,
+):
+    
+    def decorator(func):
+        converter = Converter(
+            name=name,
+            inputs=frozenset(normalize_ext(e) for e in inputs),
+            outputs=frozenset(normalize_ext(e) for e in outputs),
+            func=func,
+            is_available=is_available,
+        )
+        _converters.append(converter)
+        return func
+    return decorator
