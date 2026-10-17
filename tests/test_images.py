@@ -93,3 +93,69 @@ def test_phone_photos_stay_upright(phone_photo, target):
     dst = convert(phone_photo, target)
     with Image.open(dst) as img:
         assert img.size == (30, 40)   # rotated: portrait, not landscape
+
+
+def detailed_image():
+    """A colourful gradient: lots of detail, so quality settings make a visible difference."""
+    g = Image.linear_gradient("L").resize((128, 128))
+    r = Image.radial_gradient("L").resize((128, 128))
+    return Image.merge("RGB", (g, r, g.rotate(90)))
+
+
+@pytest.mark.parametrize("target", ["jpg", "webp"])
+def test_saves_at_higher_than_default_quality(tmp_path, target):
+    src = tmp_path / "gradient.png"
+    detailed_image().save(src)
+    reference = tmp_path / f"pillow_default.{target}"
+    detailed_image().save(reference)            # Pillow's default quality
+
+    dst = convert(src, target)
+    # higher quality keeps more detail, so the file is bigger
+    assert dst.stat().st_size > reference.stat().st_size
+
+
+def test_ico_from_non_square_image_is_square(photo):
+    dst = convert(photo, "ico")                 # photo is 40x30
+    with Image.open(dst) as img:
+        assert all(w == h for w, h in img.info["sizes"])
+
+
+def test_ico_pads_with_transparency(photo):
+    dst = convert(photo, "ico")
+    with Image.open(dst) as img:
+        img = img.convert("RGBA")
+        middle = img.width // 2
+        assert img.getpixel((middle, 0))[3] == 0          # top edge: transparent padding
+        assert img.getpixel((middle, middle))[3] == 255   # centre: the red photo
+
+
+def test_big_image_gets_all_icon_sizes(tmp_path):
+    src = tmp_path / "big.png"
+    Image.new("RGB", (300, 200), (0, 128, 0)).save(src)
+    dst = convert(src, "ico")
+    with Image.open(dst) as img:
+        for size in [(16, 16), (32, 32), (48, 48), (256, 256)]:
+            assert size in img.info["sizes"]
+
+
+def test_tiny_image_still_makes_a_valid_icon(tmp_path):
+    src = tmp_path / "tiny.png"
+    Image.new("RGB", (10, 10), (0, 0, 255)).save(src)
+    dst = convert(src, "ico")
+    with Image.open(dst) as img:
+        assert img.size == (16, 16)
+
+
+@pytest.fixture
+def cmyk_photo(tmp_path):
+    """A JPG saved with CMYK colours, like files exported for printing."""
+    src = tmp_path / "print.jpg"
+    Image.new("CMYK", (20, 20), (0, 255, 255, 0)).save(src)
+    return src
+
+
+@pytest.mark.parametrize("target", ["png", "gif", "bmp", "ico", "webp"])
+def test_cmyk_jpg_converts(cmyk_photo, target):
+    dst = convert(cmyk_photo, target)
+    with Image.open(dst) as img:
+        assert img.mode != "CMYK"

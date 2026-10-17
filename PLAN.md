@@ -157,16 +157,17 @@ and the repo is visible on GitHub.
 
 **Goal:** convert between every image format in the scope table.
 
-- [ ] Basic version: `Image.open(src)` → `img.save(dst, format=...)`
-- [ ] **Transparency:** JPG, BMP and PDF can't store alpha — paste onto a white background first
+- [X] Basic version: `Image.open(src)` → `img.save(dst, format=...)`
+- [X] **Transparency:** JPG, BMP and PDF can't store alpha — paste onto a white background first
       (otherwise transparent areas turn black)
-- [ ] **Phone photos:** apply `ImageOps.exif_transpose` so rotated photos stay upright
-- [ ] **JPG/WEBP quality:** pick sensible defaults (e.g. 92 / 90)
-- [ ] **ICO:** save multiple icon sizes (16–256 px, not larger than the source)
-- [ ] **GIF:** v1 converts the first frame only — note this in the README
-- [ ] Register it with the registry
-- [ ] Tests: create a small RGBA PNG in `tmp_path`, convert to each target, check the file opens;
+- [X] **Phone photos:** apply `ImageOps.exif_transpose` so rotated photos stay upright
+- [X] **JPG/WEBP quality:** pick sensible defaults (e.g. 92 / 90)
+- [X] **ICO:** save multiple icon sizes (16–256 px, not larger than the source)
+- [X] **GIF:** v1 converts the first frame only — note this in the README
+- [X] Register it with the registry
+- [X] Tests: create a small RGBA PNG in `tmp_path`, convert to each target, check the file opens;
       check JPG output is white (not black) where the PNG was transparent
+- [X] Extra: square, padded icons (and a minimum of 16 px); CMYK JPGs convert instead of crashing
 
 **Done when:** a transparent PNG converts cleanly to every target format and all tests pass.
 
