@@ -8,6 +8,8 @@ A desktop app that converts images, data files and documents between formats.
 |---|---|---|
 | Images | PNG, JPG, BMP, GIF, TIFF, WEBP, ICO | PNG, JPG, BMP, GIF, TIFF, WEBP, ICO, PDF |
 | Data | CSV, TSV, XLSX, JSON | CSV, TSV, XLSX, JSON |
+| Documents | TXT, MD, HTML | PDF |
+| Documents | DOCX, DOC, RTF, ODT | PDF (needs Microsoft Word) |
 
 ## Good to know
 

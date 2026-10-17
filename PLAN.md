@@ -205,22 +205,22 @@ and the repo is visible on GitHub.
 converter, so build it in four small steps.
 
 **5a. Plain text, Markdown, HTML → PDF (Qt, no extra software)**
-- [ ] Load the file into a `QTextDocument`: `setPlainText` for TXT, `setMarkdown` for MD, `setHtml` for HTML
-- [ ] Print it to a `QPdfWriter` (A4 page size, sensible margins)
-- [ ] Read text files as UTF-8, and fall back to another encoding if that fails
-- [ ] Tests: convert a small `.md` file and check the PDF exists and contains its text (read it back with pypdf)
+- [X] Load the file into a `QTextDocument`: `setPlainText` for TXT, `setMarkdown` for MD, `setHtml` for HTML
+- [X] Print it to a `QPdfWriter` (A4 page size, sensible margins)
+- [X] Read text files as UTF-8, and fall back to another encoding if that fails
+- [X] Tests: convert a small `.md` file and check the PDF exists and contains its text (read it back with pypdf)
 
 **5b. Word documents → PDF (Microsoft Word through COM)**
-- [ ] `pip install pywin32`
-- [ ] Start Word invisibly: `win32com.client.DispatchEx("Word.Application")`, set `Visible = False`
+- [X] `pip install pywin32`
+- [X] Start Word invisibly: `win32com.client.DispatchEx("Word.Application")`, set `Visible = False`
       and `DisplayAlerts = 0` so no pop-ups appear
-- [ ] `Documents.Open(src, ReadOnly=True)`, then `doc.SaveAs2(dst, FileFormat=17)` (17 = PDF)
-- [ ] **Always** close the document and `Quit()` Word in a `finally:` block. Otherwise hidden
+- [X] `Documents.Open(src, ReadOnly=True)`, then `doc.SaveAs2(dst, FileFormat=17)` (17 = PDF)
+- [X] **Always** close the document and `Quit()` Word in a `finally:` block. Otherwise hidden
       `WINWORD.EXE` processes pile up in Task Manager
-- [ ] Use **absolute** file paths, because Word doesn't understand paths relative to your script
-- [ ] `is_available()`: check that `Word.Application` can be created (cache the result)
-- [ ] Supports DOCX, DOC, RTF and ODT, since Word opens all four
-- [ ] Tests: mark them to **skip** when Word isn't installed, because GitHub's CI machines don't have it:
+- [X] Use **absolute** file paths, because Word doesn't understand paths relative to your script
+- [X] `is_available()`: check that `Word.Application` can be created (cache the result)
+- [X] Supports DOCX, DOC, RTF and ODT, since Word opens all four
+- [X] Tests: mark them to **skip** when Word isn't installed, because GitHub's CI machines don't have it:
       `@pytest.mark.skipif(not word_available(), reason="needs Microsoft Word")`
 
 **5c. PDF → DOCX and PDF → TXT**
