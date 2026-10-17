@@ -9,7 +9,7 @@ A desktop app that converts images, data files and documents between formats.
 | Images | PNG, JPG, BMP, GIF, TIFF, WEBP, ICO | PNG, JPG, BMP, GIF, TIFF, WEBP, ICO, PDF |
 | Data | CSV, TSV, XLSX, JSON | CSV, TSV, XLSX, JSON |
 | Documents | TXT, MD, HTML | PDF |
-| Documents | DOCX, DOC, RTF, ODT | PDF (needs Microsoft Word) |
+| Documents | DOCX, DOC, RTF, ODT | PDF (needs Microsoft Word or LibreOffice) |
 | PDF | PDF | TXT, DOCX (DOCX needs Microsoft Word) |
 
 ## Good to know
@@ -21,6 +21,8 @@ A desktop app that converts images, data files and documents between formats.
 - **Excel files:** only the first sheet is converted.
 - **JSON:** a list of objects becomes one row per object, and nested objects become columns like
   `owner.name`. JSON that isn't a list or an object (for example just a number) can't become a table.
+- **Word documents → PDF** uses Microsoft Word when it's installed. Without Word, the free
+  [LibreOffice](https://www.libreoffice.org/) is used instead, if it's installed.
 - **PDF → DOCX** is done by Word, which rebuilds the PDF as an editable document. Simple text PDFs
   come out well; complex layouts less so. It can take 20 seconds or more.
 - **Scanned PDFs** (photos of pages) contain no text, so they can't become TXT or a useful DOCX.

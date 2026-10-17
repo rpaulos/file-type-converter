@@ -232,12 +232,13 @@ converter, so build it in four small steps.
 - [X] Tests: make a PDF in 5a, then convert it back to TXT and check the text survived
 
 **5d. Fallback and stretch goals**
-- [ ] **LibreOffice fallback** for DOCX/DOC/RTF/ODT → PDF when Word is missing:
+- [X] **LibreOffice fallback** for DOCX/DOC/RTF/ODT → PDF when Word is missing:
       `soffice --headless --convert-to pdf --outdir <folder> <file>` with `subprocess.run`
       (search the usual install folders for `soffice.exe`)
 - [ ] **Stretch: PDF → PNG/JPG**, one image per page, with pypdfium2. This creates *several* output
       files, so `convert()` needs to return a **list** of paths (e.g. `report-page1.png`, `report-page2.png`)
-- [ ] Register the document converters with the registry
+      *(not done yet: changing what `convert()` returns affects the GUI, so decide this before Milestone 7)*
+- [X] Register the document converters with the registry
 
 **Done when:** a DOCX turns into a PDF that looks the same as in Word, that PDF turns back into an
 editable DOCX, and no stray `WINWORD.EXE` stays running afterwards.

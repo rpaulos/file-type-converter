@@ -1,13 +1,17 @@
+import dataclasses
 import re
 import subprocess
 import time
 import zipfile
+from pathlib import Path
 
 import pytest
 from PIL import Image
 from pypdf import PdfReader
 
 import file_converter.converters  # noqa: F401  (registers the document converters)
+from file_converter import registry
+from file_converter.converters import documents
 from file_converter.converters.documents import word_app, word_available
 from file_converter.registry import ConversionError, convert, targets_for
 
@@ -198,3 +202,92 @@ def test_word_pdf_to_docx(tmp_path):
     text = re.sub(r"<[^>]+>", "", xml)
     assert "Buy milk" in text
     assert "Call Grace" in text
+
+
+# ---- LibreOffice fallback ------------------------------------------------------
+# LibreOffice usually isn't installed, so most tests use a fake that records the
+# command it was given and writes a pretend PDF where the real one would.
+
+needs_libreoffice = pytest.mark.skipif(
+    documents.find_libreoffice() is None, reason="needs LibreOffice"
+)
+
+
+@pytest.fixture
+def fake_libreoffice(monkeypatch):
+    """Pretend LibreOffice is installed; returns the list of commands it was given."""
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        outdir = Path(command[command.index("--outdir") + 1])
+        src = Path(command[-1])
+        (outdir / f"{src.stem}.pdf").write_bytes(b"%PDF-1.4 pretend")
+        return subprocess.CompletedProcess(command, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(documents, "find_libreoffice", lambda: Path(r"C:\LibreOffice\soffice.exe"))
+    monkeypatch.setattr(documents.subprocess, "run", fake_run)
+    return commands
+
+
+def test_word_is_tried_before_libreoffice():
+    names = [c.name for c in registry._converters]
+    assert names.index("Word to PDF") < names.index("LibreOffice to PDF")
+
+
+def test_libreoffice_runs_a_headless_conversion(fake_libreoffice, rtf_file, tmp_path):
+    dst = tmp_path / "out.pdf"
+    documents.libreoffice_to_pdf(rtf_file, dst)
+
+    command = fake_libreoffice[0]
+    assert "--headless" in command
+    assert command[command.index("--convert-to") + 1] == "pdf"
+    assert command[-1] == str(rtf_file.resolve())
+    assert dst.read_bytes().startswith(b"%PDF")
+
+
+def test_libreoffice_output_gets_our_file_name(fake_libreoffice, rtf_file, tmp_path):
+    dst = tmp_path / "letter (1).pdf"
+    documents.libreoffice_to_pdf(rtf_file, dst)
+    assert dst.exists()
+    assert not (tmp_path / "letter.pdf").exists()   # LibreOffice's own name was replaced
+
+
+def test_libreoffice_is_used_when_word_is_missing(monkeypatch, fake_libreoffice, rtf_file):
+    # a copy of the registry where "Word to PDF" says it's unavailable
+    no_word = [
+        dataclasses.replace(c, is_available=lambda: False) if c.name == "Word to PDF" else c
+        for c in registry._converters
+    ]
+    monkeypatch.setattr(registry, "_converters", no_word)
+
+    dst = convert(rtf_file, "pdf")
+    assert dst.exists()
+    assert len(fake_libreoffice) == 1                # LibreOffice did the work
+
+
+def test_libreoffice_failure_gives_a_clear_error(monkeypatch, rtf_file, tmp_path):
+    def failing_run(command, **kwargs):
+        return subprocess.CompletedProcess(command, returncode=1, stdout="", stderr="Error")
+
+    monkeypatch.setattr(documents, "find_libreoffice", lambda: Path(r"C:\LibreOffice\soffice.exe"))
+    monkeypatch.setattr(documents.subprocess, "run", failing_run)
+    with pytest.raises(ConversionError, match="LibreOffice couldn't convert"):
+        documents.libreoffice_to_pdf(rtf_file, tmp_path / "out.pdf")
+
+
+def test_libreoffice_that_hangs_is_stopped(monkeypatch, rtf_file, tmp_path):
+    def hanging_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(documents, "find_libreoffice", lambda: Path(r"C:\LibreOffice\soffice.exe"))
+    monkeypatch.setattr(documents.subprocess, "run", hanging_run)
+    with pytest.raises(ConversionError, match="took too long"):
+        documents.libreoffice_to_pdf(rtf_file, tmp_path / "out.pdf")
+
+
+@needs_libreoffice
+def test_real_libreoffice_rtf_to_pdf(rtf_file, tmp_path):
+    dst = tmp_path / "out.pdf"
+    documents.libreoffice_to_pdf(rtf_file, dst)
+    assert "Hello from Word" in pdf_text(dst)

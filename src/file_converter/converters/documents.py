@@ -1,5 +1,8 @@
 """Document conversions: text and Word documents to PDF, and PDF back to Word or text."""
 
+import shutil
+import subprocess
+import tempfile
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
@@ -136,3 +139,56 @@ def pdf_to_text(src: Path, dst: Path) -> None:
 
     # a blank line between pages
     dst.write_text("\n\n".join(pages), encoding="utf-8")
+
+
+# ---- LibreOffice: the fallback when Word isn't installed ----------------------
+# Registered after "Word to PDF", so the registry only uses it when Word is missing.
+
+LIBREOFFICE_LOCATIONS = [
+    Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+    Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+]
+LIBREOFFICE_TIMEOUT = 120  # seconds
+
+
+@lru_cache(maxsize=None)
+def find_libreoffice() -> Path | None:
+    """Where LibreOffice's soffice.exe is, or None if it isn't installed."""
+    on_path = shutil.which("soffice")
+    if on_path:
+        return Path(on_path)
+    for location in LIBREOFFICE_LOCATIONS:
+        if location.is_file():
+            return location
+    return None
+
+
+@register(
+    "LibreOffice to PDF",
+    inputs=WORD_FORMATS,
+    outputs=["pdf"],
+    is_available=lambda: find_libreoffice() is not None,
+)
+def libreoffice_to_pdf(src: Path, dst: Path) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        command = [
+            str(find_libreoffice()),
+            # its own settings folder, so an open LibreOffice window can't interfere
+            f"-env:UserInstallation={(tmp / 'profile').as_uri()}",
+            "--headless",
+            "--convert-to", "pdf",
+            "--outdir", str(tmp),
+            str(src.resolve()),
+        ]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True,
+                                    timeout=LIBREOFFICE_TIMEOUT)
+        except subprocess.TimeoutExpired as exc:
+            raise ConversionError(f"{src.name}: LibreOffice took too long") from exc
+
+        # LibreOffice picks the output name itself (<stem>.pdf), so move it to our name
+        made = tmp / f"{src.stem}.pdf"
+        if result.returncode != 0 or not made.exists():
+            raise ConversionError(f"{src.name}: LibreOffice couldn't convert it")
+        shutil.move(made, dst)
