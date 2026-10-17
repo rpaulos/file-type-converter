@@ -8,6 +8,7 @@ from file_converter.registry import (
     Converter,
     ConversionError,
     common_targets,
+    convert,
     normalize_ext,
     output_path,
     register,
@@ -218,3 +219,82 @@ def test_output_path_custom_folder(tmp_path):
 def test_output_path_does_not_create_the_file(tmp_path):
     src = tmp_path / "photo.png"
     assert not output_path(src, "jpg").exists()
+
+
+def write_upper(src, dst):
+    """Fake converter: writes the source text in capitals."""
+    dst.write_text(src.read_text().upper())
+
+
+@pytest.fixture
+def note(tmp_path):
+    """A small source file with a made-up .aaa extension."""
+    src = tmp_path / "note.aaa"
+    src.write_text("hello")
+    return src
+
+
+def test_convert_runs_the_converter(note):
+    register("Upper", inputs=["aaa"], outputs=["bbb"])(write_upper)
+    dst = convert(note, "bbb")
+    assert dst == note.parent / "note.bbb"
+    assert dst.read_text() == "HELLO"
+
+
+def test_convert_never_overwrites(note):
+    register("Upper", inputs=["aaa"], outputs=["bbb"])(write_upper)
+    (note.parent / "note.bbb").write_text("old")
+    dst = convert(note, "bbb")
+    assert dst.name == "note (1).bbb"
+    assert (note.parent / "note.bbb").read_text() == "old"
+
+
+def test_convert_creates_the_output_folder(note, tmp_path):
+    register("Upper", inputs=["aaa"], outputs=["bbb"])(write_upper)
+    out = tmp_path / "new" / "folder"
+    dst = convert(note, "bbb", out)
+    assert dst.parent == out
+    assert dst.exists()
+
+
+def test_convert_unsupported_pair(note):
+    add_fake(["aaa"], ["bbb"])
+    with pytest.raises(ConversionError, match="Can't convert"):
+        convert(note, "ccc")
+
+
+def test_convert_skips_unavailable_converters(note):
+    add_fake(["aaa"], ["bbb"], available=False)
+    with pytest.raises(ConversionError):
+        convert(note, "bbb")
+
+
+def test_convert_missing_file(tmp_path):
+    with pytest.raises(ConversionError, match="not found"):
+        convert(tmp_path / "missing.aaa", "bbb")
+
+
+def test_convert_same_format(note):
+    add_fake(["aaa"], ["aaa", "bbb"])
+    with pytest.raises(ConversionError, match="already"):
+        convert(note, "aaa")
+
+
+def test_convert_wraps_library_errors(note):
+    def broken(src, dst):
+        dst.write_text("half a file")
+        raise ValueError("bad pixels")
+
+    register("Broken", inputs=["aaa"], outputs=["bbb"])(broken)
+    with pytest.raises(ConversionError, match="bad pixels"):
+        convert(note, "bbb")
+    assert not (note.parent / "note.bbb").exists()   # half-written file cleaned up
+
+
+def test_convert_keeps_conversion_error_message(note):
+    def picky(src, dst):
+        raise ConversionError("too big")
+
+    register("Picky", inputs=["aaa"], outputs=["bbb"])(picky)
+    with pytest.raises(ConversionError, match="^too big$"):
+        convert(note, "bbb")

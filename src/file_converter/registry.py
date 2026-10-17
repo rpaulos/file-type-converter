@@ -105,3 +105,36 @@ def output_path(src, target_ext: str, out_dir=None) -> Path:
         dst = out_dir / f"{src.stem} ({n}).{ext}"
 
     return dst
+
+
+def convert(src, target_ext: str, out_dir=None) -> Path:
+    """Convert src to target_ext and return the new file's path."""
+
+    src = Path(src)
+
+    if not src.is_file():
+        raise ConversionError(f"File not found: {src}")
+    
+    in_ext = normalize_ext(src.suffix)
+    target = normalize_ext(target_ext)
+
+    if in_ext == target:
+        raise ConversionError(f"{src.name} is already a .{target} file")
+
+    # find a converter that reads this format, writes the target, and can run here
+    for c in _converters:
+        if in_ext in c.inputs and target in c.outputs and c.is_available():
+            dst = output_path(src, target, out_dir)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+
+            try:
+                c.func(src, dst)
+            except ConversionError:
+                raise
+            except Exception as exc:
+                dst.unlink(missing_ok=True)
+                raise ConversionError(f"{src.name}: {exc}") from exc
+            return dst
+
+    # the loop finished without finding one
+    raise ConversionError(f"Can't convert .{in_ext} to .{target}")

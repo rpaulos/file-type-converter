@@ -134,18 +134,18 @@ and the repo is visible on GitHub.
 
 **Goal:** the core that everything else plugs into, with no real converters yet.
 
-- [ ] `normalize_ext(ext)` — lowercase, strip the dot, map aliases (`jpeg`→`jpg`, `tif`→`tiff`)
-- [ ] A `Converter` dataclass: `name`, `inputs`, `outputs`, `func`, and an optional
+- [X] `normalize_ext(ext)` — lowercase, strip the dot, map aliases (`jpeg`→`jpg`, `tif`→`tiff`)
+- [X] A `Converter` dataclass: `name`, `inputs`, `outputs`, `func`, and an optional
       `is_available` check (defaults to always available)
-- [ ] A `register(name, inputs, outputs)` **decorator** that adds a converter to a module-level list
-- [ ] `ConversionError` exception — the only error type the UI has to handle
-- [ ] `targets_for(path)` — every output format reachable from this file's extension (minus its own),
+- [X] A `register(name, inputs, outputs)` **decorator** that adds a converter to a module-level list
+- [X] `ConversionError` exception — the only error type the UI has to handle
+- [X] `targets_for(path)` — every output format reachable from this file's extension (minus its own),
       skipping converters that aren't available on this machine
-- [ ] `common_targets(paths)` — formats that *all* selected files can become (for batch conversion)
-- [ ] `output_path(src, ext, out_dir)` — never overwrite: `photo.jpg` → `photo (1).jpg` → `photo (2).jpg`
-- [ ] `convert(src, target_ext, out_dir=None)` — find a matching converter, run it, return the new path;
+- [X] `common_targets(paths)` — formats that *all* selected files can become (for batch conversion)
+- [X] `output_path(src, ext, out_dir)` — never overwrite: `photo.jpg` → `photo (1).jpg` → `photo (2).jpg`
+- [X] `convert(src, target_ext, out_dir=None)` — find a matching converter, run it, return the new path;
       wrap library errors in `ConversionError` and delete half-written output files
-- [ ] Tests in `tests/test_registry.py` using a fake converter registered just for the test
+- [X] Tests in `tests/test_registry.py` using a fake converter registered just for the test
 
 **Done when:** tests pass for alias handling, no-overwrite naming, and "can't convert X to Y" errors.
 
