@@ -42,3 +42,37 @@ def test_jpeg_alias_works(photo):
 
 def test_image_cannot_become_csv(photo):
     assert "csv" not in targets_for(photo)
+
+
+@pytest.fixture
+def logo(tmp_path):
+    """A 40x30 PNG: left half solid red, right half fully transparent."""
+    src = tmp_path / "logo.png"
+    img = Image.new("RGBA", (40, 30), (0, 0, 0, 0))
+    img.paste((255, 0, 0, 255), (0, 0, 20, 30))
+    img.save(src)
+    return src
+
+
+@pytest.mark.parametrize("target", ["jpg", "bmp"])
+def test_transparent_areas_become_white(logo, target):
+    dst = convert(logo, target)
+    with Image.open(dst) as img:
+        img = img.convert("RGB")
+        r, g, b = img.getpixel((30, 15))       # a pixel in the transparent half
+        assert min(r, g, b) > 240              # white (JPG can be off by a few)
+        r, g, b = img.getpixel((5, 15))        # a pixel in the red half
+        assert r > 200 and g < 50 and b < 50   # still red
+
+
+def test_transparent_png_to_pdf(logo):
+    dst = convert(logo, "pdf")
+    assert dst.read_bytes().startswith(b"%PDF")
+
+
+@pytest.mark.parametrize("target", ["webp", "tiff"])
+def test_formats_with_transparency_keep_it(logo, target):
+    dst = convert(logo, target)
+    with Image.open(dst) as img:
+        assert img.mode == "RGBA"
+        assert img.getpixel((30, 15))[3] == 0  # alpha is still 0 = invisible
