@@ -1,9 +1,17 @@
 import dataclasses
+from pathlib import Path
 
 import pytest
 
 from file_converter import registry
-from file_converter.registry import Converter, ConversionError, normalize_ext, register
+from file_converter.registry import (
+    Converter,
+    ConversionError,
+    common_targets,
+    normalize_ext,
+    register,
+    targets_for,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -118,3 +126,56 @@ def test_register_custom_availability():
         pass
 
     assert registry._converters[0].is_available() is False
+
+
+def add_fake(inputs, outputs, available=True):
+    """Register a do-nothing converter for testing."""
+    register("Fake", inputs=inputs, outputs=outputs, is_available=lambda: available)(fake_convert)
+
+
+def test_targets_for_file_name():
+    add_fake(["png", "jpg"], ["png", "jpg", "webp"])
+    assert targets_for("photo.png") == ["jpg", "webp"]   # sorted, own format excluded
+
+
+def test_targets_for_accepts_path_and_bare_extension():
+    add_fake(["png", "jpg"], ["png", "jpg", "webp"])
+    assert targets_for(Path("C:/pics/photo.PNG")) == ["jpg", "webp"]
+    assert targets_for("png") == ["jpg", "webp"]
+
+
+def test_targets_for_understands_aliases():
+    add_fake(["png", "jpg"], ["png", "jpg", "webp"])
+    assert targets_for("photo.jpeg") == ["png", "webp"]
+
+
+def test_targets_for_combines_converters():
+    add_fake(["csv"], ["xlsx"])
+    add_fake(["csv"], ["json"])
+    assert targets_for("data.csv") == ["json", "xlsx"]
+
+
+def test_targets_for_unknown_type():
+    add_fake(["png"], ["jpg"])
+    assert targets_for("song.mp3") == []
+
+
+def test_targets_for_skips_unavailable_converters():
+    add_fake(["docx"], ["pdf"], available=False)
+    assert targets_for("report.docx") == []
+
+
+def test_common_targets_keeps_shared_formats():
+    add_fake(["png", "jpg", "gif"], ["png", "jpg", "gif", "pdf"])
+    # png -> jpg, gif, pdf   and   jpg -> png, gif, pdf   → shared: gif, pdf
+    assert common_targets(["a.png", "b.jpg"]) == ["gif", "pdf"]
+
+
+def test_common_targets_mixed_types_share_nothing():
+    add_fake(["png"], ["jpg"])
+    add_fake(["csv"], ["xlsx"])
+    assert common_targets(["a.png", "b.csv"]) == []
+
+
+def test_common_targets_empty_list():
+    assert common_targets([]) == []

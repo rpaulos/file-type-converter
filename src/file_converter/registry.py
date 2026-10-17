@@ -58,3 +58,31 @@ def register(
         _converters.append(converter)
         return func
     return decorator
+
+
+def targets_for(path) -> list[str]:
+    """Output formats available for a file (or a bare extension like 'png')."""
+
+    # get the extension; fall back to the whole string for "png" or ".png"
+    ext = normalize_ext(Path(path).suffix or str(path))
+
+    # collect outputs from every available converter that reads this format
+    targets = set()
+    for c in _converters:
+        if ext in c.inputs and c.is_available():
+            targets.update(c.outputs)
+
+    # png -> png isn't a conversion
+    targets.discard(ext)
+    return sorted(targets)
+
+
+def common_targets(paths) -> list[str]:
+    """Output formats that every one of the given files can be converted to."""
+
+    sets = [set(targets_for(p)) for p in paths]
+    if not sets:
+        return []
+
+    # keep only the formats that appear in every file's set
+    return sorted(set.intersection(*sets))
