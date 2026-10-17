@@ -99,25 +99,25 @@ Each milestone ends with something that works and a commit. Tick the boxes as yo
 
 **Goal:** an empty-but-real Python project, under version control, pushed to GitHub.
 
-- [ ] Set your git identity (one time, not set yet on this machine)
+- [x] Set your git identity (one time, not set yet on this machine)
   ```bash
   git config --global user.name "Your Name"
   git config --global user.email "you@example.com"
   ```
-- [ ] Create and activate a virtual environment
+- [x] Create and activate a virtual environment
   ```bash
   python -m venv .venv
   .venv\Scripts\Activate.ps1
   ```
-- [ ] Write `pyproject.toml` (name, version `0.1.0`, `requires-python = ">=3.10"`, dependencies:
+- [x] Write `pyproject.toml` (name, version `0.1.0`, `requires-python = ">=3.10"`, dependencies:
       `PySide6`, `Pillow`, `pandas`, `openpyxl`, `pypdf`, `pywin32`; dev extra: `pytest`).
       Use the `src/` layout. You can also add dependencies later, as each milestone needs them.
-- [ ] Create `src/file_converter/__init__.py` with `__version__ = "0.1.0"`
-- [ ] Install in editable mode: `pip install -e ".[dev]"`
-- [ ] Add `.gitignore` (`.venv/`, `__pycache__/`, `*.egg-info/`, `.pytest_cache/`, `build/`, `dist/`)
-- [ ] Add a short `README.md` and a `LICENSE` (MIT is a common default)
-- [ ] `git init`, first commit
-- [ ] Create the GitHub repo (pick public or private) and push — either:
+- [x] Create `src/file_converter/__init__.py` with `__version__ = "0.1.0"`
+- [x] Install in editable mode: `pip install -e ".[dev]"`
+- [x] Add `.gitignore` (`.venv/`, `__pycache__/`, `*.egg-info/`, `.pytest_cache/`, `build/`, `dist/`)
+- [x] Add a short `README.md` and a `LICENSE` (MIT is a common default)
+- [x] `git init`, first commit
+- [x] Create the GitHub repo (pick public or private) and push — either:
   - **Website:** create an empty repo on github.com, then
     `git remote add origin <url>` and `git push -u origin main`, or
   - **GitHub CLI:** `winget install GitHub.cli`, `gh auth login`, then
