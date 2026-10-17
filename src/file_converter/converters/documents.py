@@ -1,9 +1,10 @@
-"""Document conversions: text, Markdown and HTML to PDF, and Word documents to PDF."""
+"""Document conversions: text and Word documents to PDF, and PDF back to Word or text."""
 
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
+from pypdf import PdfReader
 from PySide6.QtCore import QMarginsF
 from PySide6.QtGui import QGuiApplication, QPageLayout, QPageSize, QPdfWriter, QTextDocument
 
@@ -64,6 +65,7 @@ def text_to_pdf(src: Path, dst: Path) -> None:
 
 WORD_FORMATS = ["docx", "doc", "rtf", "odt"]
 WORD_PDF = 17    # Word's internal code for "save as PDF"
+WORD_DOCX = 16   # Word's internal code for "save as DOCX"
 
 
 @lru_cache(maxsize=None)
@@ -99,14 +101,38 @@ def word_error_message(exc) -> str:
         return str(exc)
 
 
-@register("Word to PDF", inputs=WORD_FORMATS, outputs=["pdf"], is_available=word_available)
-def word_to_pdf(src: Path, dst: Path) -> None:
+def save_with_word(src: Path, dst: Path, file_format: int) -> None:
+    """Open src in hidden Word and save it as dst in one of Word's formats."""
     try:
         with word_app() as word:
-            doc = word.Documents.Open(str(src.resolve()), ReadOnly=True)
+            # ConfirmConversions=False: open PDFs without asking "Word will now convert..."
+            doc = word.Documents.Open(str(src.resolve()), ConfirmConversions=False, ReadOnly=True)
             try:
-                doc.SaveAs2(str(dst.resolve()), FileFormat=WORD_PDF)
+                doc.SaveAs2(str(dst.resolve()), FileFormat=file_format)
             finally:
                 doc.Close(SaveChanges=0)
     except com_error as exc:
         raise ConversionError(f"{src.name}: {word_error_message(exc)}") from exc
+
+
+@register("Word to PDF", inputs=WORD_FORMATS, outputs=["pdf"], is_available=word_available)
+def word_to_pdf(src: Path, dst: Path) -> None:
+    save_with_word(src, dst, WORD_PDF)
+
+
+@register("PDF to Word", inputs=["pdf"], outputs=["docx"], is_available=word_available)
+def pdf_to_word(src: Path, dst: Path) -> None:
+    # Word rebuilds the PDF as an editable document; simple layouts come out best
+    save_with_word(src, dst, WORD_DOCX)
+
+
+@register("PDF to text", inputs=["pdf"], outputs=["txt"])
+def pdf_to_text(src: Path, dst: Path) -> None:
+    pages = [(page.extract_text() or "").strip() for page in PdfReader(src).pages]
+
+    # scanned PDFs are just pictures of pages: there's no text to pull out without OCR
+    if not any(pages):
+        raise ConversionError(f"{src.name} has no selectable text (it may be a scanned image)")
+
+    # a blank line between pages
+    dst.write_text("\n\n".join(pages), encoding="utf-8")

@@ -1,7 +1,10 @@
+import re
 import subprocess
 import time
+import zipfile
 
 import pytest
+from PIL import Image
 from pypdf import PdfReader
 
 import file_converter.converters  # noqa: F401  (registers the document converters)
@@ -139,3 +142,59 @@ def test_broken_word_file_gives_a_clear_error(tmp_path):
     assert message.startswith("broken.docx: ")
     assert "Exception occurred" not in message
     assert "\n" not in message
+
+
+# ---- PDF back to text and Word -------------------------------------------------
+
+@pytest.fixture
+def text_pdf(tmp_path):
+    """A PDF of more than one page with real text in it, made by the Text to PDF converter."""
+    src = tmp_path / "notes.txt"
+    src.write_text("First page starts here\n" + "filler line\n" * 120 + "Last line of the notes",
+                   encoding="utf-8")
+    return convert(src, "pdf")
+
+
+def test_pdf_offers_txt():
+    assert "txt" in targets_for("report.pdf")
+
+
+def test_pdf_to_txt_keeps_the_text(text_pdf):
+    text = convert(text_pdf, "txt").read_text(encoding="utf-8")
+    assert "First page starts here" in text
+    assert "Last line of the notes" in text
+
+
+def test_pdf_to_txt_separates_pages(text_pdf):
+    assert len(PdfReader(text_pdf).pages) > 1
+    text = convert(text_pdf, "txt").read_text(encoding="utf-8")
+    assert "\n\n" in text            # the blank line between pages
+
+
+def test_scanned_pdf_has_no_text(tmp_path):
+    src = tmp_path / "scan.png"
+    Image.new("RGB", (200, 100), "white").save(src)
+    pdf = convert(src, "pdf")        # an image-only PDF, like a scanner makes
+
+    with pytest.raises(ConversionError, match="no selectable text"):
+        convert(pdf, "txt")
+    assert not (tmp_path / "scan.txt").exists()
+
+
+@needs_word
+def test_pdf_offers_docx():
+    assert "docx" in targets_for("report.pdf")
+
+
+@needs_word
+def test_word_pdf_to_docx(tmp_path):
+    src = tmp_path / "notes.txt"
+    src.write_text("Buy milk\nCall Grace", encoding="utf-8")
+    docx = convert(convert(src, "pdf"), "docx")
+
+    # a .docx is a zip file; the text lives in word/document.xml between XML tags
+    with zipfile.ZipFile(docx) as z:
+        xml = z.read("word/document.xml").decode("utf-8")
+    text = re.sub(r"<[^>]+>", "", xml)
+    assert "Buy milk" in text
+    assert "Call Grace" in text

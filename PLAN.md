@@ -224,12 +224,12 @@ converter, so build it in four small steps.
       `@pytest.mark.skipif(not word_available(), reason="needs Microsoft Word")`
 
 **5c. PDF → DOCX and PDF → TXT**
-- [ ] **PDF → DOCX via Word:** `Documents.Open(pdf, ConfirmConversions=False)` makes Word turn the PDF
+- [X] **PDF → DOCX via Word:** `Documents.Open(pdf, ConfirmConversions=False)` makes Word turn the PDF
       into an editable document, then `SaveAs2(dst, FileFormat=16)` (16 = DOCX)
-- [ ] Note in the README that results depend on the PDF: simple text PDFs come out well, complex
+- [X] Note in the README that results depend on the PDF: simple text PDFs come out well, complex
       layouts less so, and **scanned PDFs (photos of pages) have no text to extract** without OCR
-- [ ] **PDF → TXT via pypdf:** read every page with `page.extract_text()`, separate pages with a blank line
-- [ ] Tests: make a PDF in 5a, then convert it back to TXT and check the text survived
+- [X] **PDF → TXT via pypdf:** read every page with `page.extract_text()`, separate pages with a blank line
+- [X] Tests: make a PDF in 5a, then convert it back to TXT and check the text survived
 
 **5d. Fallback and stretch goals**
 - [ ] **LibreOffice fallback** for DOCX/DOC/RTF/ODT → PDF when Word is missing:
