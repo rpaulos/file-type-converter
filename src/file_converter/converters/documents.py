@@ -10,6 +10,7 @@ from pathlib import Path
 from pypdf import PdfReader
 from PySide6.QtCore import QMarginsF
 from PySide6.QtGui import QGuiApplication, QPageLayout, QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtWidgets import QApplication
 
 from ..registry import ConversionError, normalize_ext, register
 from .data import TEXT_ENCODINGS
@@ -30,8 +31,8 @@ _qt_app = None
 def ensure_qt_app() -> None:
     """Create Qt's application object, unless the app window already made one."""
     global _qt_app
-    if QGuiApplication.instance() is None:
-        _qt_app = QGuiApplication([])
+    if QApplication.instance() is None:
+        _qt_app = QApplication([])
 
 
 def read_text_file(path: Path) -> str:
