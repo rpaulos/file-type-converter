@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
@@ -18,6 +19,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"File Type Converter {__version__}")
         self.resize(640, 480)
+        self.setAcceptDrops(True)   # allow files to be dropped onto the window
 
         # the list of files to convert
         self.file_list = QListWidget()
@@ -57,6 +59,11 @@ class MainWindow(QMainWindow):
         skipped = []
         for p in paths:
             path = Path(p)
+            # a folder: add the supported files directly inside it
+            if path.is_dir():
+                inside = [f for f in sorted(path.iterdir()) if f.is_file() and targets_for(f)]
+                skipped += self.add_files(inside)
+                continue
             if path in already:
                 continue
             if not path.is_file() or not targets_for(path):
@@ -87,6 +94,17 @@ class MainWindow(QMainWindow):
     def remove_selected(self) -> None:
         for item in self.file_list.selectedItems():
             self.file_list.takeItem(self.file_list.row(item))
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Files are being dragged over the window: say yes if they're files."""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Files were dropped: add them to the list."""
+        paths = [url.toLocalFile() for url in event.mimeData().urls() if url.isLocalFile()]
+        event.acceptProposedAction()
+        self.add_files_and_report(paths)
 
 
 def main() -> int:
