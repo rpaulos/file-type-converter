@@ -12,6 +12,7 @@ from file_converter.registry import (
     normalize_ext,
     output_path,
     register,
+    supported_inputs,
     targets_for,
 )
 
@@ -298,3 +299,10 @@ def test_convert_keeps_conversion_error_message(note):
     register("Picky", inputs=["aaa"], outputs=["bbb"])(picky)
     with pytest.raises(ConversionError, match="^too big$"):
         convert(note, "bbb")
+
+
+def test_supported_inputs_lists_readable_formats():
+    add_fake(["png", "jpg"], ["webp"])
+    add_fake(["csv"], ["xlsx"])
+    add_fake(["docx"], ["pdf"], available=False)    # not installed → not listed
+    assert supported_inputs() == ["csv", "jpg", "png"]

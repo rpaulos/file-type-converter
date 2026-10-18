@@ -252,15 +252,15 @@ conditionally, file encodings.
 
 **Goal:** a quick way to use the converters before the GUI exists.
 
-- [ ] `cli.py` with `argparse`:
+- [X] `cli.py` with `argparse`:
   ```
   fconvert photo.png --to jpg
   fconvert *.csv --to xlsx --out-dir converted
   fconvert --formats          # list what converts to what
   ```
-- [ ] Print `OK`/`FAIL` per file; exit code `1` if anything failed
-- [ ] Add a `[project.scripts]` entry so `fconvert` works after `pip install -e .`
-- [ ] Tests for success, failure, and `--formats`
+- [X] Print `OK`/`FAIL` per file; exit code `1` if anything failed
+- [X] Add a `[project.scripts]` entry so `fconvert` works after `pip install -e .`
+- [X] Tests for success, failure, and `--formats`
 
 **Done when:** you can convert real files from the terminal.
 

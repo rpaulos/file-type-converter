@@ -138,3 +138,12 @@ def convert(src, target_ext: str, out_dir=None) -> Path:
 
     # the loop finished without finding one
     raise ConversionError(f"Can't convert .{in_ext} to .{target}")
+
+
+def supported_inputs() -> list[str]:
+    """Every format that at least one available converter can read."""
+    formats = set()
+    for c in _converters:
+        if c.is_available():
+            formats.update(c.inputs)
+    return sorted(formats)

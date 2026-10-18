@@ -28,3 +28,11 @@ A desktop app that converts images, data files and documents between formats.
 - **Scanned PDFs** (photos of pages) contain no text, so they can't become TXT or a useful DOCX.
 - **CSV files** are saved so that Excel shows accented letters (é, ñ, ü) correctly. CSVs saved by older
   versions of Excel can be read too.
+
+## Command line
+
+```
+fconvert photo.png --to jpg
+fconvert *.csv --to xlsx --out-dir converted
+fconvert --formats
+```
