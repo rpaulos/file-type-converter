@@ -45,7 +45,57 @@ double-click it (it takes a few seconds to open), or drag files onto it to open 
 - **CSV files** are saved so that Excel shows accented letters (é, ñ, ü) correctly. CSVs saved by older
   versions of Excel can be read too.
 
-## Command line
+## Tech stack
+
+| Part | Built with |
+|---|---|
+| Language | Python 3.10+ |
+| Desktop window | [PySide6](https://doc.qt.io/qtforpython-6/) (Qt), with a background `QThread` so the window never freezes |
+| Images | [Pillow](https://python-pillow.org/) |
+| Data files | [pandas](https://pandas.pydata.org/) and [openpyxl](https://openpyxl.readthedocs.io/) (Excel) |
+| Text → PDF | Qt's `QTextDocument` and `QPdfWriter` |
+| PDF → text | [pypdf](https://pypdf.readthedocs.io/) |
+| Word documents | Microsoft Word, controlled through [pywin32](https://github.com/mhammond/pywin32) (COM), or LibreOffice as a fallback |
+| Command line | `argparse` |
+| Tests | [pytest](https://pytest.org/) and [pytest-qt](https://pytest-qt.readthedocs.io/) |
+| Packaging | [PyInstaller](https://pyinstaller.org/) (one-file Windows `.exe`) |
+| CI and releases | GitHub Actions |
+
+Each converter registers itself in a small registry (`src/file_converter/registry.py`), which the
+window and the command-line tool both use to work out what can be converted to what.
+
+## Running it locally
+
+You need **Windows** and **Python 3.10 or newer**.
+
+1. Get the code and go into its folder:
+   ```
+   git clone https://github.com/rpaulos/file-type-converter.git
+   cd file-type-converter
+   ```
+2. Make a virtual environment (a private set of packages for this project) and switch it on:
+   ```
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+3. Install the app and its test tools:
+   ```
+   pip install -e ".[dev]"
+   ```
+   `-e` means "editable": changes you make to the code take effect without reinstalling.
+
+### Using the app
+
+```
+file-converter
+```
+
+Add files with **Add files…** or drag them (or a whole folder) onto the window, pick a format in
+**Convert to**, choose where to save, and click **Convert**. Each file gets a ✔ or ✖ (hover over a ✖
+to see why), and **Open output folder** shows the results. `python -m file_converter` opens the
+window too.
+
+### Using the command line
 
 ```
 fconvert photo.png --to jpg
@@ -53,10 +103,26 @@ fconvert *.csv --to xlsx --out-dir converted
 fconvert --formats
 ```
 
-## Running the tests
+`--formats` lists every conversion the app can do on your PC.
+
+### Project layout
 
 ```
-pip install -e ".[dev]"
+src/file_converter/
+    registry.py        finds the right converter for each file
+    converters/        images.py, data.py, documents.py
+    gui.py             the window
+    cli.py             the fconvert command
+tests/                 one test file per part
+launcher.py            what the .exe starts from
+FileTypeConverter.spec PyInstaller's recipe for the .exe
+```
+
+## Running the tests
+
+With the virtual environment switched on:
+
+```
 pytest
 ```
 
