@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__, converters  # noqa: F401  (registers every converter)
-from .registry import common_targets, convert, find_converter, supported_inputs, targets_for
+from .registry import (
+    common_targets, convert, find_converter, normalize_ext, supported_inputs, targets_for,
+)
 
 # pywin32 only exists on Windows; without it there's no Word, so no COM to set up
 try:
@@ -25,6 +27,8 @@ class ConvertWorker(QThread):
 
     # sent after each file: its row in the list, whether it worked, and the new path or the error
     file_done = Signal(int, bool, str)
+    # sent instead of file_done when a file is already in the chosen format (its row)
+    file_skipped = Signal(int)
     # sent before each file: what's happening, for the status bar
     status = Signal(str)
 
@@ -52,6 +56,11 @@ class ConvertWorker(QThread):
             if self.isInterruptionRequested():   # the window is closing: stop here
                 break
 
+            # a PNG in a batch going to PNG: leave it as it is
+            if normalize_ext(path.suffix) == normalize_ext(self.target):
+                self.file_skipped.emit(row)
+                continue
+
             # outside programs like Word take a few seconds to open, so say why it's quiet
             converter = find_converter(path, self.target)
             if converter is not None and converter.app:
@@ -75,6 +84,7 @@ class MainWindow(QMainWindow):
 
         self.worker = None      # the background conversion, once one has been started
         self.converted = []     # the new files made by the last conversion
+        self.skipped = 0        # files the last conversion left alone (already that format)
         self.busy = False       # True while a conversion is running
 
         # the list of files to convert
@@ -260,13 +270,14 @@ class MainWindow(QMainWindow):
         """Convert every file in the list, in the background."""
         files = self.files()
 
-        # wipe the ✔ and ✖ marks from an earlier conversion
+        # wipe the ✔, ✖ and — marks from an earlier conversion
         for row, path in enumerate(files):
             item = self.file_list.item(row)
             item.setText(path.name)
             item.setToolTip(str(path))
 
         self.converted = []
+        self.skipped = 0
         self.progress.setRange(0, len(files))
         self.progress.setValue(0)
         self.open_folder_button.setEnabled(False)
@@ -275,6 +286,7 @@ class MainWindow(QMainWindow):
         self.worker = ConvertWorker(files, self.format_box.currentText(), self.output_folder)
         self.worker.status.connect(self.statusBar().showMessage)
         self.worker.file_done.connect(self.on_file_done)
+        self.worker.file_skipped.connect(self.on_file_skipped)
         self.worker.finished.connect(self.on_conversion_finished)
         self.worker.start()
 
@@ -291,10 +303,21 @@ class MainWindow(QMainWindow):
             item.setToolTip(message)                 # hover to see what went wrong
         self.progress.setValue(self.progress.value() + 1)
 
+    def on_file_skipped(self, row: int) -> None:
+        """A file was already in the chosen format: mark it — and move the progress bar on."""
+        item = self.file_list.item(row)
+        name = Path(item.data(Qt.UserRole)).name
+        item.setText(f"—  {name}")
+        item.setToolTip(f"Already a .{self.worker.target} file, so it was left as it is")
+        self.skipped += 1
+        self.progress.setValue(self.progress.value() + 1)
+
     def on_conversion_finished(self) -> None:
         """Every file is done: say how it went and unlock the window."""
-        failed = len(self.worker.files) - len(self.converted)
+        failed = len(self.worker.files) - len(self.converted) - self.skipped
         message = f"Done: {len(self.converted)} converted"
+        if self.skipped:
+            message += f", {self.skipped} already {self.worker.target}"
         if failed:
             message += f", {failed} failed (hover over a ✖ to see why)"
         self.statusBar().showMessage(message)

@@ -16,6 +16,8 @@ A desktop app that converts images, data files and documents between formats.
 
 ## Good to know
 
+- **Mixed lists:** the "Convert to" choice applies to every file in the list. Files that are already
+  in that format (say, the PNGs when you convert a mix of PNGs and JPGs to PNG) are left as they are.
 - **Transparency:** JPG, BMP and PDF can't store transparent pixels, so transparent areas become white.
 - **Animated GIFs:** only the first frame is converted.
 - **Icons (ICO):** non-square pictures are centred on a transparent square, and every standard

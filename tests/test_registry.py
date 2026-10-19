@@ -183,8 +183,14 @@ def test_targets_for_skips_unavailable_converters():
 
 def test_common_targets_keeps_shared_formats():
     add_fake(["png", "jpg", "gif"], ["png", "jpg", "gif", "pdf"])
-    # png -> jpg, gif, pdf   and   jpg -> png, gif, pdf   → shared: gif, pdf
-    assert common_targets(["a.png", "b.jpg"]) == ["gif", "pdf"]
+    # png -> jpg, gif, pdf (or stays png)   and   jpg -> png, gif, pdf (or stays jpg)
+    # → shared: gif, jpg, pdf, png
+    assert common_targets(["a.png", "b.jpg"]) == ["gif", "jpg", "pdf", "png"]
+
+
+def test_common_targets_leaves_out_the_format_every_file_has():
+    add_fake(["png", "jpg"], ["png", "jpg", "webp"])
+    assert common_targets(["a.png", "b.png"]) == ["jpg", "webp"]
 
 
 def test_common_targets_mixed_types_share_nothing():

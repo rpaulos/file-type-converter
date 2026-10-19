@@ -26,6 +26,11 @@ def make_png(path):
     return path
 
 
+def make_jpg(path):
+    Image.new("RGB", (20, 20), (50, 50, 200)).save(path)
+    return path
+
+
 def test_window_title(window):
     assert window.windowTitle().startswith("File Type Converter")
 
@@ -339,3 +344,25 @@ def test_word_documents_convert_in_the_background(window, qtbot, tmp_path):
     convert_all(window, qtbot, "pdf")
     assert window.file_list.item(0).text() == "✔  letter.rtf"
     assert (tmp_path / "letter.pdf").exists()
+
+
+def test_png_and_jpg_together_can_become_either(window, tmp_path):
+    window.add_files([make_png(tmp_path / "cat.png"), make_jpg(tmp_path / "holiday.jpg")])
+    assert "png" in formats(window)
+    assert "jpg" in formats(window)
+
+
+def test_a_file_already_in_the_format_is_left_alone(window, qtbot, tmp_path):
+    window.add_files([make_png(tmp_path / "cat.png"), make_jpg(tmp_path / "holiday.jpg")])
+    convert_all(window, qtbot, "png")
+    assert window.file_list.item(0).text() == "—  cat.png"
+    assert "Already a .png" in window.file_list.item(0).toolTip()
+    assert window.file_list.item(1).text() == "✔  holiday.jpg"
+    assert sorted(p.name for p in tmp_path.glob("*.png")) == ["cat.png", "holiday.png"]
+    assert window.statusBar().currentMessage() == "Done: 1 converted, 1 already png"
+    assert window.progress.value() == 2
+
+
+def test_worker_skips_quietly(qtbot, tmp_path):
+    files = [make_png(tmp_path / "cat.png"), make_jpg(tmp_path / "holiday.jpg")]
+    assert run_worker(qtbot, files, "png") == ["Converting holiday.jpg (2 of 2)…"]

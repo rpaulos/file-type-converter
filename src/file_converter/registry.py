@@ -81,14 +81,28 @@ def targets_for(path) -> list[str]:
 
 
 def common_targets(paths) -> list[str]:
-    """Output formats that every one of the given files can be converted to."""
+    """Output formats that every one of the given files can be converted to, or already is.
 
-    sets = [set(targets_for(p)) for p in paths]
-    if not sets:
+    A file that's already in the chosen format is simply left alone, so a PNG and a JPG
+    can both "become" PNG. A format that every file already has isn't offered, though:
+    there'd be nothing to convert.
+    """
+
+    paths = list(paths)   # it's gone through twice below
+    own = [normalize_ext(Path(p).suffix) for p in paths]
+    if not own:
         return []
 
+    # each file's options: what it can become, plus what it already is
+    sets = [set(targets_for(p)) | {ext} for p, ext in zip(paths, own)]
+
     # keep only the formats that appear in every file's set
-    return sorted(set.intersection(*sets))
+    common = set.intersection(*sets)
+
+    # every file is already this format: nothing to do
+    if len(set(own)) == 1:
+        common.discard(own[0])
+    return sorted(common)
 
 
 def output_path(src, target_ext: str, out_dir=None) -> Path:
