@@ -1,5 +1,7 @@
 # File Type Converter
 
+[![Tests](https://github.com/rpaulos/file-type-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/rpaulos/file-type-converter/actions/workflows/ci.yml)
+
 A desktop app that converts images, data files and documents between formats.
 
 ## Supported conversions
@@ -36,3 +38,14 @@ fconvert photo.png --to jpg
 fconvert *.csv --to xlsx --out-dir converted
 fconvert --formats
 ```
+
+## Running the tests
+
+```
+pip install -e ".[dev]"
+pytest
+```
+
+GitHub runs the tests on every push to `main` and on every pull request (see the badge above).
+GitHub's computers don't have Microsoft Word, so the Word tests are skipped there. Run them on
+your own PC before you push.
