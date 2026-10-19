@@ -235,6 +235,14 @@ def test_word_is_tried_before_libreoffice():
     assert names.index("Word to PDF") < names.index("LibreOffice to PDF")
 
 
+def test_converters_that_start_an_app_say_so():
+    apps = {c.name: c.app for c in registry._converters}
+    assert apps["Word to PDF"] == "Word"
+    assert apps["PDF to Word"] == "Word"
+    assert apps["LibreOffice to PDF"] == "LibreOffice"
+    assert apps["Text to PDF"] == ""
+
+
 def test_libreoffice_runs_a_headless_conversion(fake_libreoffice, rtf_file, tmp_path):
     dst = tmp_path / "out.pdf"
     documents.libreoffice_to_pdf(rtf_file, dst)

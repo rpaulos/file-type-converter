@@ -119,12 +119,14 @@ def save_with_word(src: Path, dst: Path, file_format: int) -> None:
         raise ConversionError(f"{src.name}: {word_error_message(exc)}") from exc
 
 
-@register("Word to PDF", inputs=WORD_FORMATS, outputs=["pdf"], is_available=word_available)
+@register("Word to PDF", inputs=WORD_FORMATS, outputs=["pdf"], is_available=word_available,
+          app="Word")
 def word_to_pdf(src: Path, dst: Path) -> None:
     save_with_word(src, dst, WORD_PDF)
 
 
-@register("PDF to Word", inputs=["pdf"], outputs=["docx"], is_available=word_available)
+@register("PDF to Word", inputs=["pdf"], outputs=["docx"], is_available=word_available,
+          app="Word")
 def pdf_to_word(src: Path, dst: Path) -> None:
     # Word rebuilds the PDF as an editable document; simple layouts come out best
     save_with_word(src, dst, WORD_DOCX)
@@ -169,6 +171,7 @@ def find_libreoffice() -> Path | None:
     inputs=WORD_FORMATS,
     outputs=["pdf"],
     is_available=lambda: find_libreoffice() is not None,
+    app="LibreOffice",
 )
 def libreoffice_to_pdf(src: Path, dst: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:

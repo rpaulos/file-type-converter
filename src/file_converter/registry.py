@@ -37,6 +37,7 @@ class Converter:
     outputs: frozenset[str]
     func: Callable[[Path, Path], None]
     is_available: Callable[[], bool] = always_available
+    app: str = ""   # an outside program it starts, like "Word" (slow to open); "" for none
 
 _converters: list["Converter"] = []
 
@@ -45,8 +46,9 @@ def register(
     inputs: list[str],
     outputs: list[str],
     is_available: Callable[[], bool] = always_available,
+    app: str = "",
 ):
-    
+
     def decorator(func):
         converter = Converter(
             name=name,
@@ -54,6 +56,7 @@ def register(
             outputs=frozenset(normalize_ext(e) for e in outputs),
             func=func,
             is_available=is_available,
+            app=app,
         )
         _converters.append(converter)
         return func
@@ -107,6 +110,19 @@ def output_path(src, target_ext: str, out_dir=None) -> Path:
     return dst
 
 
+def find_converter(src, target_ext: str) -> Converter | None:
+    """The converter that would turn src into target_ext, or None if there isn't one."""
+
+    in_ext = normalize_ext(Path(src).suffix)
+    target = normalize_ext(target_ext)
+
+    # the first one that reads this format, writes the target, and can run here
+    for c in _converters:
+        if in_ext in c.inputs and target in c.outputs and c.is_available():
+            return c
+    return None
+
+
 def convert(src, target_ext: str, out_dir=None) -> Path:
     """Convert src to target_ext and return the new file's path."""
 
@@ -114,30 +130,28 @@ def convert(src, target_ext: str, out_dir=None) -> Path:
 
     if not src.is_file():
         raise ConversionError(f"File not found: {src}")
-    
+
     in_ext = normalize_ext(src.suffix)
     target = normalize_ext(target_ext)
 
     if in_ext == target:
         raise ConversionError(f"{src.name} is already a .{target} file")
 
-    # find a converter that reads this format, writes the target, and can run here
-    for c in _converters:
-        if in_ext in c.inputs and target in c.outputs and c.is_available():
-            dst = output_path(src, target, out_dir)
-            dst.parent.mkdir(parents=True, exist_ok=True)
+    converter = find_converter(src, target)
+    if converter is None:
+        raise ConversionError(f"Can't convert .{in_ext} to .{target}")
 
-            try:
-                c.func(src, dst)
-            except ConversionError:
-                raise
-            except Exception as exc:
-                dst.unlink(missing_ok=True)
-                raise ConversionError(f"{src.name}: {exc}") from exc
-            return dst
+    dst = output_path(src, target, out_dir)
+    dst.parent.mkdir(parents=True, exist_ok=True)
 
-    # the loop finished without finding one
-    raise ConversionError(f"Can't convert .{in_ext} to .{target}")
+    try:
+        converter.func(src, dst)
+    except ConversionError:
+        raise
+    except Exception as exc:
+        dst.unlink(missing_ok=True)
+        raise ConversionError(f"{src.name}: {exc}") from exc
+    return dst
 
 
 def supported_inputs() -> list[str]:

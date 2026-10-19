@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,7 +9,9 @@ from PySide6.QtCore import QMimeData, QPointF, QUrl
 from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QMessageBox, QFileDialog
 
-from file_converter.gui import MainWindow
+from file_converter import gui, registry
+from file_converter.converters.documents import word_available
+from file_converter.gui import ConvertWorker, MainWindow
 
 
 @pytest.fixture
@@ -196,7 +199,7 @@ def convert_all(window, qtbot, target):
     """Pick a format, click Convert, and wait for the background thread to finish."""
     window.format_box.setCurrentText(target)
     qtbot.mouseClick(window.convert_button, Qt.LeftButton)
-    qtbot.waitUntil(lambda: not window.busy, timeout=10_000)
+    qtbot.waitUntil(lambda: not window.busy, timeout=60_000)   # Word can be slow to start
 
 
 def test_asks_for_a_format_once_files_are_added(window, tmp_path):
@@ -282,3 +285,57 @@ def test_closing_during_a_conversion_stops_it(window, qtbot, tmp_path):
     qtbot.mouseClick(window.convert_button, Qt.LeftButton)
     window.close()
     assert not window.worker.isRunning()
+
+
+def run_worker(qtbot, files, target):
+    """Run a ConvertWorker on its own and collect its status messages."""
+    worker = ConvertWorker(files, target, None)
+    messages = []
+    # DirectConnection: record each message straight away, in the worker's own thread.
+    # Fine for adding to a list; widgets must never be touched like this.
+    worker.status.connect(messages.append, Qt.DirectConnection)
+    with qtbot.waitSignal(worker.finished, timeout=60_000):
+        worker.start()
+    return messages
+
+
+def test_worker_says_which_file_it_is_on(qtbot, tmp_path):
+    files = [make_png(tmp_path / "a.png"), make_png(tmp_path / "b.png")]
+    assert run_worker(qtbot, files, "jpg") == [
+        "Converting a.png (1 of 2)…",
+        "Converting b.png (2 of 2)…",
+    ]
+
+
+def test_worker_says_when_it_starts_an_outside_app(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(registry, "_converters", [])     # only the fake converter below
+
+    @registry.register("Fake Word", inputs=["docx"], outputs=["pdf"], app="Word")
+    def fake_word(src, dst):
+        dst.write_text("pretend PDF")
+
+    doc = tmp_path / "letter.docx"
+    doc.write_text("pretend document")
+    assert run_worker(qtbot, [doc], "pdf") == ["Starting Word for letter.docx (1 of 1)…"]
+
+
+def test_worker_sets_up_com_for_its_thread(qtbot, monkeypatch):
+    calls = []
+    fake_pythoncom = SimpleNamespace(
+        CoInitialize=lambda: calls.append("set up"),
+        CoUninitialize=lambda: calls.append("tidy up"),
+    )
+    monkeypatch.setattr(gui, "pythoncom", fake_pythoncom)
+    run_worker(qtbot, [], "jpg")
+    assert calls == ["set up", "tidy up"]
+
+
+@pytest.mark.skipif(not word_available(), reason="needs Microsoft Word")
+def test_word_documents_convert_in_the_background(window, qtbot, tmp_path):
+    rtf = tmp_path / "letter.rtf"
+    rtf.write_text(r"{\rtf1\ansi\deff0 {\fonttbl {\f0 Calibri;}}\f0\fs24 Hello.\par}",
+                   encoding="ascii")
+    window.add_files([rtf])
+    convert_all(window, qtbot, "pdf")
+    assert window.file_list.item(0).text() == "✔  letter.rtf"
+    assert (tmp_path / "letter.pdf").exists()

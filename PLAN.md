@@ -272,23 +272,23 @@ conditionally, file encodings.
 
 **Goal:** the actual app window.
 
-- [ ] Basic `QMainWindow` that opens and closes (`gui.py`, `main()` function)
-- [ ] File list (`QListWidget`) + **Add files…** button (`QFileDialog`, filtered to supported types)
-- [ ] **Drag and drop** files onto the window
-- [ ] **Remove selected** and **Clear** buttons
-- [ ] Unsupported files are skipped with a friendly message
-- [ ] **"Convert to"** dropdown filled from `common_targets()` — refreshes whenever the list changes
-- [ ] **Output location:** "save next to originals" checkbox, or pick a folder
-- [ ] **Convert** button + progress bar
-- [ ] Run conversions in a **`QThread` worker** so the window doesn't freeze on big files;
+- [X] Basic `QMainWindow` that opens and closes (`gui.py`, `main()` function)
+- [X] File list (`QListWidget`) + **Add files…** button (`QFileDialog`, filtered to supported types)
+- [X] **Drag and drop** files onto the window
+- [X] **Remove selected** and **Clear** buttons
+- [X] Unsupported files are skipped with a friendly message
+- [X] **"Convert to"** dropdown filled from `common_targets()` — refreshes whenever the list changes
+- [X] **Output location:** "save next to originals" checkbox, or pick a folder
+- [X] **Convert** button + progress bar
+- [X] Run conversions in a **`QThread` worker** so the window doesn't freeze on big files;
       send progress back with **signals**
-- [ ] Word needs COM set up in every thread that uses it: call `pythoncom.CoInitialize()` at the
+- [X] Word needs COM set up in every thread that uses it: call `pythoncom.CoInitialize()` at the
       start of the worker and `pythoncom.CoUninitialize()` at the end
-- [ ] Word is slow to start (a few seconds), so show "Starting Word…" in the status bar
-- [ ] Mark each file ✔ / ✖ in the list; show a summary in the status bar
-- [ ] **Open output folder** button after a successful run
-- [ ] `[project.gui-scripts]` entry so `file-converter` launches the window
-- [ ] `python -m file_converter` opens the GUI (with arguments → runs the CLI)
+- [X] Word is slow to start (a few seconds), so show "Starting Word…" in the status bar
+- [X] Mark each file ✔ / ✖ in the list; show a summary in the status bar
+- [X] **Open output folder** button after a successful run
+- [X] `[project.gui-scripts]` entry so `file-converter` launches the window
+- [X] `python -m file_converter` opens the GUI (with arguments → runs the CLI)
 
 **Done when:** you can drag in a mix of PNGs, pick JPG, convert, and open the results, and do the
 same for a few DOCX files to PDF, without the window ever freezing.

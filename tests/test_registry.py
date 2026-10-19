@@ -9,6 +9,7 @@ from file_converter.registry import (
     ConversionError,
     common_targets,
     convert,
+    find_converter,
     normalize_ext,
     output_path,
     register,
@@ -80,6 +81,10 @@ def test_converter_can_have_custom_availability():
     assert c.is_available() is False
 
 
+def test_converter_starts_no_app_by_default():
+    assert make_converter().app == ""
+
+
 def test_converter_is_frozen():
     c = make_converter()
     with pytest.raises(dataclasses.FrozenInstanceError):
@@ -129,6 +134,14 @@ def test_register_custom_availability():
         pass
 
     assert registry._converters[0].is_available() is False
+
+
+def test_register_can_name_the_app_it_starts():
+    @register("Fake", inputs=["aaa"], outputs=["bbb"], app="Word")
+    def convert_fake(src, dst):
+        pass
+
+    assert registry._converters[0].app == "Word"
 
 
 def add_fake(inputs, outputs, available=True):
@@ -220,6 +233,18 @@ def test_output_path_custom_folder(tmp_path):
 def test_output_path_does_not_create_the_file(tmp_path):
     src = tmp_path / "photo.png"
     assert not output_path(src, "jpg").exists()
+
+
+def test_find_converter_picks_the_first_that_fits():
+    add_fake(["aaa"], ["bbb"], available=False)          # not installed: skipped
+    register("Second", inputs=["aaa"], outputs=["bbb"])(fake_convert)
+    register("Third", inputs=["aaa"], outputs=["bbb"])(fake_convert)
+    assert find_converter("note.aaa", "bbb").name == "Second"
+
+
+def test_find_converter_when_nothing_fits():
+    add_fake(["aaa"], ["bbb"])
+    assert find_converter("note.aaa", "ccc") is None
 
 
 def write_upper(src, dst):

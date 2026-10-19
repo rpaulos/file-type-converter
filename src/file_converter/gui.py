@@ -11,7 +11,13 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__, converters  # noqa: F401  (registers every converter)
-from .registry import common_targets, convert, supported_inputs, targets_for
+from .registry import common_targets, convert, find_converter, supported_inputs, targets_for
+
+# pywin32 only exists on Windows; without it there's no Word, so no COM to set up
+try:
+    import pythoncom
+except ImportError:
+    pythoncom = None
 
 
 class ConvertWorker(QThread):
@@ -19,6 +25,8 @@ class ConvertWorker(QThread):
 
     # sent after each file: its row in the list, whether it worked, and the new path or the error
     file_done = Signal(int, bool, str)
+    # sent before each file: what's happening, for the status bar
+    status = Signal(str)
 
     def __init__(self, files: list[Path], target: str, out_dir: Path | None) -> None:
         super().__init__()
@@ -28,9 +36,29 @@ class ConvertWorker(QThread):
 
     def run(self) -> None:
         """This is what runs in the background thread once start() is called."""
+        # Word is controlled through COM, which every thread that uses it must set up first
+        if pythoncom is not None:
+            pythoncom.CoInitialize()
+        try:
+            self.convert_all()
+        finally:
+            if pythoncom is not None:
+                pythoncom.CoUninitialize()
+
+    def convert_all(self) -> None:
+        """Convert each file in turn, reporting on each one with signals."""
+        total = len(self.files)
         for row, path in enumerate(self.files):
             if self.isInterruptionRequested():   # the window is closing: stop here
                 break
+
+            # outside programs like Word take a few seconds to open, so say why it's quiet
+            converter = find_converter(path, self.target)
+            if converter is not None and converter.app:
+                self.status.emit(f"Starting {converter.app} for {path.name} ({row + 1} of {total})…")
+            else:
+                self.status.emit(f"Converting {path.name} ({row + 1} of {total})…")
+
             try:
                 dst = convert(path, self.target, self.out_dir)
                 self.file_done.emit(row, True, str(dst))
@@ -242,10 +270,10 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, len(files))
         self.progress.setValue(0)
         self.open_folder_button.setEnabled(False)
-        self.statusBar().showMessage("Converting…")
         self.set_busy(True)
 
         self.worker = ConvertWorker(files, self.format_box.currentText(), self.output_folder)
+        self.worker.status.connect(self.statusBar().showMessage)
         self.worker.file_done.connect(self.on_file_done)
         self.worker.finished.connect(self.on_conversion_finished)
         self.worker.start()
