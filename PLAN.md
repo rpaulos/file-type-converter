@@ -304,10 +304,10 @@ layout, spacing and wording.
 
 **Goal:** GitHub runs your tests automatically.
 
-- [ ] `.github/workflows/ci.yml`: on push to `main` and on pull requests, `windows-latest`,
+- [X] `.github/workflows/ci.yml`: on push to `main` and on pull requests, `windows-latest`,
       Python 3.10 and 3.12, `pip install -e ".[dev]"`, `pytest`
-- [ ] Word tests will show as *skipped* in CI. That's expected, so run them locally before you push
-- [ ] Add a CI status badge to the README
+- [X] Word tests will show as *skipped* in CI. That's expected, so run them locally before you push
+- [X] Add a CI status badge to the README
 - [ ] From now on, consider working on branches + pull requests so CI checks each change
 
 **Done when:** the Actions tab on GitHub shows a green check.
