@@ -295,9 +295,6 @@ same for a few DOCX files to PDF, without the window ever freezing.
 
 **Concepts:** Qt widgets and layouts, signals & slots, threads, drag-and-drop events.
 
-**Design help:** once the window works, `/impeccable critique` and `/impeccable polish` can review
-layout, spacing and wording.
-
 ---
 
 ### Milestone 8 — Continuous integration
@@ -350,14 +347,3 @@ layout, spacing and wording.
 - **Windows right-click menu** "Convert with File Type Converter"
 - Remember last-used format and output folder between sessions
 - Dark mode
-
----
-
-## Working together
-
-You write the code for each milestone. Claude can:
-
-- explain a concept before you start a milestone
-- review your code when you finish a step
-- help debug errors (paste the traceback)
-- write tests first so you can code against them, if you want that style
