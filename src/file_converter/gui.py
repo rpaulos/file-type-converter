@@ -3,15 +3,39 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
-    QApplication, QFileDialog, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QMainWindow, QMessageBox, QPushButton, QVBoxLayout, QWidget, QCheckBox, QComboBox
+    QApplication, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel, QListWidget,
+    QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QVBoxLayout, QWidget,
 )
 
 from . import __version__, converters  # noqa: F401  (registers every converter)
-from .registry import supported_inputs, targets_for, common_targets
+from .registry import common_targets, convert, supported_inputs, targets_for
+
+
+class ConvertWorker(QThread):
+    """Converts the files one by one in a background thread, so the window never freezes."""
+
+    # sent after each file: its row in the list, whether it worked, and the new path or the error
+    file_done = Signal(int, bool, str)
+
+    def __init__(self, files: list[Path], target: str, out_dir: Path | None) -> None:
+        super().__init__()
+        self.files = files
+        self.target = target
+        self.out_dir = out_dir
+
+    def run(self) -> None:
+        """This is what runs in the background thread once start() is called."""
+        for row, path in enumerate(self.files):
+            if self.isInterruptionRequested():   # the window is closing: stop here
+                break
+            try:
+                dst = convert(path, self.target, self.out_dir)
+                self.file_done.emit(row, True, str(dst))
+            except Exception as exc:   # a ConversionError, or a surprise like a full disk
+                self.file_done.emit(row, False, str(exc))
 
 
 class MainWindow(QMainWindow):
@@ -20,6 +44,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"File Type Converter {__version__}")
         self.resize(640, 480)
         self.setAcceptDrops(True)   # allow files to be dropped onto the window
+
+        self.worker = None      # the background conversion, once one has been started
+        self.converted = []     # the new files made by the last conversion
+        self.busy = False       # True while a conversion is running
 
         # the list of files to convert
         self.file_list = QListWidget()
@@ -40,7 +68,7 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self.clear_button)
         buttons.addStretch()
 
-                # where converted files go: None means "next to each original"
+        # where converted files go: None means "next to each original"
         self.output_folder = None
 
         # the "Convert to" dropdown
@@ -61,12 +89,27 @@ class MainWindow(QMainWindow):
         options.addWidget(self.same_folder)
         options.addStretch()
 
+        # progress bar, then the two buttons that act on the whole list
+        self.progress = QProgressBar()
+        self.open_folder_button = QPushButton("Open output folder")
+        self.open_folder_button.setEnabled(False)      # nothing converted yet
+        self.open_folder_button.clicked.connect(self.open_output_folder)
+        self.convert_button = QPushButton("Convert")
+        self.convert_button.setEnabled(False)          # no files yet
+        self.convert_button.clicked.connect(self.start_conversion)
+
+        bottom = QHBoxLayout()
+        bottom.addWidget(self.progress)
+        bottom.addWidget(self.open_folder_button)
+        bottom.addWidget(self.convert_button)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Files to convert:"))
         layout.addWidget(self.file_list)
         layout.addLayout(buttons)
         layout.addLayout(options)
         layout.addWidget(self.folder_label)
+        layout.addLayout(bottom)
 
         central = QWidget()
         central.setLayout(layout)
@@ -77,6 +120,11 @@ class MainWindow(QMainWindow):
         model.rowsInserted.connect(self.refresh_formats)
         model.rowsRemoved.connect(self.refresh_formats)
         model.modelReset.connect(self.refresh_formats)
+
+        # the Convert button wakes up once a format is picked
+        self.format_box.currentIndexChanged.connect(self.update_convert_button)
+
+        self.statusBar().showMessage("Add files, choose a format, then click Convert.")
 
     def files(self) -> list[Path]:
         """The files currently in the list."""
@@ -150,6 +198,12 @@ class MainWindow(QMainWindow):
             self.format_box.setPlaceholderText("Add files first")
         elif not targets:
             self.format_box.setPlaceholderText("No format fits all files")
+        else:
+            self.format_box.setPlaceholderText("Choose a format")
+
+    def update_convert_button(self, *_) -> None:
+        """Convert can be clicked once a format is picked, but not during a conversion."""
+        self.convert_button.setEnabled(self.format_box.currentIndex() >= 0 and not self.busy)
 
     def on_same_folder_toggled(self, checked: bool) -> None:
         """Ticked: save next to the originals. Unticked: ask for a folder."""
@@ -164,6 +218,72 @@ class MainWindow(QMainWindow):
             self.folder_label.setText(f"Saving to: {folder}")
         else:
             self.same_folder.setChecked(True)   # cancelled: go back to "next to the originals"
+
+    def set_busy(self, busy: bool) -> None:
+        """While converting, lock everything that could change the list or the settings."""
+        self.busy = busy
+        for widget in (self.add_button, self.remove_button, self.clear_button,
+                       self.format_box, self.same_folder):
+            widget.setEnabled(not busy)
+        self.setAcceptDrops(not busy)
+        self.update_convert_button()
+
+    def start_conversion(self) -> None:
+        """Convert every file in the list, in the background."""
+        files = self.files()
+
+        # wipe the ✔ and ✖ marks from an earlier conversion
+        for row, path in enumerate(files):
+            item = self.file_list.item(row)
+            item.setText(path.name)
+            item.setToolTip(str(path))
+
+        self.converted = []
+        self.progress.setRange(0, len(files))
+        self.progress.setValue(0)
+        self.open_folder_button.setEnabled(False)
+        self.statusBar().showMessage("Converting…")
+        self.set_busy(True)
+
+        self.worker = ConvertWorker(files, self.format_box.currentText(), self.output_folder)
+        self.worker.file_done.connect(self.on_file_done)
+        self.worker.finished.connect(self.on_conversion_finished)
+        self.worker.start()
+
+    def on_file_done(self, row: int, ok: bool, message: str) -> None:
+        """One file is finished: mark it ✔ or ✖ and move the progress bar on."""
+        item = self.file_list.item(row)
+        name = Path(item.data(Qt.UserRole)).name
+        if ok:
+            item.setText(f"✔  {name}")
+            item.setToolTip(f"Saved as {message}")
+            self.converted.append(Path(message))
+        else:
+            item.setText(f"✖  {name}")
+            item.setToolTip(message)                 # hover to see what went wrong
+        self.progress.setValue(self.progress.value() + 1)
+
+    def on_conversion_finished(self) -> None:
+        """Every file is done: say how it went and unlock the window."""
+        failed = len(self.worker.files) - len(self.converted)
+        message = f"Done: {len(self.converted)} converted"
+        if failed:
+            message += f", {failed} failed (hover over a ✖ to see why)"
+        self.statusBar().showMessage(message)
+        self.open_folder_button.setEnabled(bool(self.converted))
+        self.set_busy(False)
+
+    def open_output_folder(self) -> None:
+        """Show the converted files in File Explorer."""
+        folder = self.converted[0].parent
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    def closeEvent(self, event) -> None:
+        """Closing during a conversion: finish the current file, skip the rest, then close."""
+        if self.worker is not None and self.worker.isRunning():
+            self.worker.requestInterruption()
+            self.worker.wait()
+        super().closeEvent(event)
 
 
 def main() -> int:

@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QMimeData, QPointF, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QMessageBox, QFileDialog
 
 from file_converter.gui import MainWindow
@@ -188,3 +190,95 @@ def test_cancelling_the_folder_choice(window, monkeypatch):
     window.same_folder.setChecked(False)
     assert window.same_folder.isChecked()        # back to "next to the originals"
     assert window.output_folder is None
+
+
+def convert_all(window, qtbot, target):
+    """Pick a format, click Convert, and wait for the background thread to finish."""
+    window.format_box.setCurrentText(target)
+    qtbot.mouseClick(window.convert_button, Qt.LeftButton)
+    qtbot.waitUntil(lambda: not window.busy, timeout=10_000)
+
+
+def test_asks_for_a_format_once_files_are_added(window, tmp_path):
+    window.add_files([make_png(tmp_path / "a.png")])
+    assert window.format_box.currentIndex() == -1          # nothing picked yet
+    assert window.format_box.placeholderText() == "Choose a format"
+
+
+def test_convert_button_needs_a_format(window, tmp_path):
+    assert not window.convert_button.isEnabled()
+    window.add_files([make_png(tmp_path / "a.png")])
+    assert not window.convert_button.isEnabled()           # files, but no format yet
+    window.format_box.setCurrentText("jpg")
+    assert window.convert_button.isEnabled()
+    window.add_files([make_csv(tmp_path / "b.csv")])       # no format fits both
+    assert not window.convert_button.isEnabled()
+
+
+def test_converts_every_file(window, qtbot, tmp_path):
+    window.add_files([make_png(tmp_path / "a.png"), make_png(tmp_path / "b.png")])
+    convert_all(window, qtbot, "jpg")
+    assert (tmp_path / "a.jpg").exists()
+    assert (tmp_path / "b.jpg").exists()
+    assert window.file_list.item(0).text() == "✔  a.png"
+    assert window.progress.value() == 2
+    assert window.statusBar().currentMessage() == "Done: 2 converted"
+
+
+def test_saves_into_the_chosen_folder(window, qtbot, tmp_path, monkeypatch):
+    out = tmp_path / "converted"
+    out.mkdir()
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *args: str(out))
+    window.same_folder.setChecked(False)
+    window.add_files([make_png(tmp_path / "a.png")])
+    convert_all(window, qtbot, "webp")
+    assert (out / "a.webp").exists()
+
+
+def test_a_failed_file_is_marked_and_the_rest_carry_on(window, qtbot, tmp_path):
+    broken = tmp_path / "broken.png"
+    broken.write_bytes(b"this is not really a picture")
+    good = make_png(tmp_path / "good.png")
+    window.add_files([broken, good])
+    convert_all(window, qtbot, "jpg")
+    assert window.file_list.item(0).text() == "✖  broken.png"
+    assert "broken.png" in window.file_list.item(0).toolTip()      # the error message
+    assert window.file_list.item(1).text() == "✔  good.png"
+    assert "1 failed" in window.statusBar().currentMessage()
+
+
+def test_window_is_locked_while_busy(window):
+    window.set_busy(True)
+    assert not window.add_button.isEnabled()
+    assert not window.convert_button.isEnabled()
+    assert not window.acceptDrops()
+    window.set_busy(False)
+    assert window.add_button.isEnabled()
+    assert window.acceptDrops()
+
+
+def test_converting_again_clears_old_marks(window, qtbot, tmp_path):
+    window.add_files([make_png(tmp_path / "a.png")])
+    convert_all(window, qtbot, "jpg")
+    window.add_files([make_png(tmp_path / "b.png")])
+    convert_all(window, qtbot, "gif")
+    assert window.file_list.item(0).text() == "✔  a.png"
+    assert window.progress.value() == 2
+
+
+def test_open_output_folder(window, qtbot, tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: opened.append(url))
+    assert not window.open_folder_button.isEnabled()
+    window.add_files([make_png(tmp_path / "a.png")])
+    convert_all(window, qtbot, "jpg")
+    qtbot.mouseClick(window.open_folder_button, Qt.LeftButton)
+    assert Path(opened[0].toLocalFile()) == tmp_path
+
+
+def test_closing_during_a_conversion_stops_it(window, qtbot, tmp_path):
+    window.add_files([make_png(tmp_path / f"{n}.png") for n in range(30)])
+    window.format_box.setCurrentText("tiff")
+    qtbot.mouseClick(window.convert_button, Qt.LeftButton)
+    window.close()
+    assert not window.worker.isRunning()
