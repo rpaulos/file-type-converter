@@ -295,9 +295,6 @@ same for a few DOCX files to PDF, without the window ever freezing.
 
 **Concepts:** Qt widgets and layouts, signals & slots, threads, drag-and-drop events.
 
-**Design help:** once the window works, `/impeccable critique` and `/impeccable polish` can review
-layout, spacing and wording.
-
 ---
 
 ### Milestone 8 — Continuous integration
@@ -308,7 +305,7 @@ layout, spacing and wording.
       Python 3.10 and 3.12, `pip install -e ".[dev]"`, `pytest`
 - [X] Word tests will show as *skipped* in CI. That's expected, so run them locally before you push
 - [X] Add a CI status badge to the README
-- [ ] From now on, consider working on branches + pull requests so CI checks each change
+- [X] From now on, consider working on branches + pull requests so CI checks each change
 
 **Done when:** the Actions tab on GitHub shows a green check.
 
@@ -320,14 +317,14 @@ layout, spacing and wording.
 
 **Goal:** a downloadable `.exe` for people without Python.
 
-- [ ] `pip install pyinstaller`
-- [ ] Build: `pyinstaller --noconsole --onefile --name FileTypeConverter <entry script>`
+- [X] `pip install pyinstaller`
+- [X] Build: `pyinstaller --noconsole --onefile --name FileTypeConverter <entry script>`
       (PyInstaller needs a plain script entry point, not the `-m` package form)
-- [ ] Test the `.exe` on your machine, ideally also on a PC without Python
-- [ ] Check that `pywin32` got bundled: DOCX → PDF must still work from the `.exe`
-- [ ] README: explain that DOCX/DOC/RTF/ODT conversions need **Microsoft Word or LibreOffice**
+- [X] Test the `.exe` on your machine, ideally also on a PC without Python
+- [X] Check that `pywin32` got bundled: DOCX → PDF must still work from the `.exe`
+- [X] README: explain that DOCX/DOC/RTF/ODT conversions need **Microsoft Word or LibreOffice**
       installed. Everything else works without them
-- [ ] Add an app icon (you can make one with your own converter's ICO output!)
+- [X] Add an app icon (you can make one with your own converter's ICO output!)
 - [ ] Tag the version (`git tag v0.1.0`, `git push --tags`) and create a **GitHub Release** with the `.exe` attached
 - [ ] Optional: a second workflow that builds and attaches the `.exe` automatically when you push a tag
 
@@ -350,14 +347,3 @@ layout, spacing and wording.
 - **Windows right-click menu** "Convert with File Type Converter"
 - Remember last-used format and output folder between sessions
 - Dark mode
-
----
-
-## Working together
-
-You write the code for each milestone. Claude can:
-
-- explain a concept before you start a milestone
-- review your code when you finish a step
-- help debug errors (paste the traceback)
-- write tests first so you can code against them, if you want that style

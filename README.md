@@ -4,6 +4,18 @@
 
 A desktop app that converts images, data files and documents between formats.
 
+## Download
+
+Get **FileTypeConverter.exe** from the
+[latest release](https://github.com/rpaulos/file-type-converter/releases/latest). No Python needed:
+double-click it (it takes a few seconds to open), or drag files onto it to open them straight away.
+
+- Windows may say **"Windows protected your PC"** the first time, because the app isn't signed with a
+  paid certificate. Click **More info**, then **Run anyway**.
+- Converting **DOCX, DOC, RTF and ODT** files needs **Microsoft Word** or the free
+  [LibreOffice](https://www.libreoffice.org/) installed, and **PDF → DOCX** needs Word.
+  Everything else works on its own.
+
 ## Supported conversions
 
 | Category | From | To |
@@ -51,3 +63,26 @@ pytest
 GitHub runs the tests on every push to `main` and on every pull request (see the badge above).
 GitHub's computers don't have Microsoft Word, so the Word tests are skipped there. Run them on
 your own PC before you push.
+
+## Building the .exe
+
+```
+pip install -e ".[build]"
+pyinstaller --noconfirm FileTypeConverter.spec
+```
+
+The app ends up in `dist\FileTypeConverter.exe`. `FileTypeConverter.spec` is PyInstaller's recipe:
+it starts from `launcher.py` and packs in the icon.
+
+## Releasing a new version
+
+1. Change the version number in `pyproject.toml` and `src/file_converter/__init__.py`.
+2. Tag the commit on `main` and push the tag:
+   ```
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+GitHub then runs the tests, builds the .exe and publishes it on the
+[Releases page](https://github.com/rpaulos/file-type-converter/releases)
+(see `.github/workflows/release.yml`).

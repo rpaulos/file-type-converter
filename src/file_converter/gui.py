@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent, QIcon
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QVBoxLayout, QWidget,
@@ -20,6 +20,10 @@ try:
     import pythoncom
 except ImportError:
     pythoncom = None
+
+# the app's icon, made from assets/icon.png with our own ICO converter;
+# FileTypeConverter.spec packs it into the .exe in the same place, next to this file
+ICON = Path(__file__).with_name("icon.ico")
 
 
 class ConvertWorker(QThread):
@@ -79,6 +83,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"File Type Converter {__version__}")
+        self.setWindowIcon(QIcon(str(ICON)))
         self.resize(640, 480)
         self.setAcceptDrops(True)   # allow files to be dropped onto the window
 
