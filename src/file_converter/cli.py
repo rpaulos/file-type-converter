@@ -32,15 +32,6 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("give one or more files and --to FORMAT (or use --formats)")
 
     failures = 0
-    for path in args.files:
-        try:
-            dst = convert(path, args.to, args.out_dir)
-            print(f"OK   {path} -> {dst}")
-        except ConversionError as exc:
-            failures += 1
-            print(f"FAIL {exc}", file=sys.stderr)
-
-    failures = 0
     for pattern in args.files:
         paths = expand(pattern)
         if not paths:

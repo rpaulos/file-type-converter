@@ -67,3 +67,9 @@ def test_wildcards_are_expanded(tmp_path):
 def test_wildcard_that_matches_nothing(tmp_path, capsys):
     assert main([str(tmp_path / "*.png"), "--to", "jpg"]) == 1
     assert "No files match" in capsys.readouterr().err
+
+
+def test_each_file_is_converted_once(tmp_path):
+    photo = make_png(tmp_path / "photo.png")
+    assert main([str(photo), "--to", "jpg"]) == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["photo.jpg", "photo.png"]
