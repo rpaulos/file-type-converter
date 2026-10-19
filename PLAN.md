@@ -325,8 +325,8 @@ same for a few DOCX files to PDF, without the window ever freezing.
 - [X] README: explain that DOCX/DOC/RTF/ODT conversions need **Microsoft Word or LibreOffice**
       installed. Everything else works without them
 - [X] Add an app icon (you can make one with your own converter's ICO output!)
-- [ ] Tag the version (`git tag v0.1.0`, `git push --tags`) and create a **GitHub Release** with the `.exe` attached
-- [ ] Optional: a second workflow that builds and attaches the `.exe` automatically when you push a tag
+- [X] Tag the version (`git tag v0.1.0`, `git push --tags`) and create a **GitHub Release** with the `.exe` attached
+- [X] Optional: a second workflow that builds and attaches the `.exe` automatically when you push a tag
 
 **Done when:** someone can download the `.exe` from your GitHub Releases page and convert a file.
 
