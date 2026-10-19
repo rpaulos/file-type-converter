@@ -323,11 +323,11 @@ layout, spacing and wording.
 - [X] `pip install pyinstaller`
 - [X] Build: `pyinstaller --noconsole --onefile --name FileTypeConverter <entry script>`
       (PyInstaller needs a plain script entry point, not the `-m` package form)
-- [ ] Test the `.exe` on your machine, ideally also on a PC without Python
-- [ ] Check that `pywin32` got bundled: DOCX → PDF must still work from the `.exe`
-- [ ] README: explain that DOCX/DOC/RTF/ODT conversions need **Microsoft Word or LibreOffice**
+- [X] Test the `.exe` on your machine, ideally also on a PC without Python
+- [X] Check that `pywin32` got bundled: DOCX → PDF must still work from the `.exe`
+- [X] README: explain that DOCX/DOC/RTF/ODT conversions need **Microsoft Word or LibreOffice**
       installed. Everything else works without them
-- [ ] Add an app icon (you can make one with your own converter's ICO output!)
+- [X] Add an app icon (you can make one with your own converter's ICO output!)
 - [ ] Tag the version (`git tag v0.1.0`, `git push --tags`) and create a **GitHub Release** with the `.exe` attached
 - [ ] Optional: a second workflow that builds and attaches the `.exe` automatically when you push a tag
 
