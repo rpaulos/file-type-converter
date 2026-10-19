@@ -35,6 +35,16 @@ def test_window_title(window):
     assert window.windowTitle().startswith("File Type Converter")
 
 
+def test_window_has_the_app_icon(window):
+    assert not window.windowIcon().isNull()
+
+
+def test_icon_file_has_every_size_windows_uses():
+    sizes = Image.open(gui.ICON).info["sizes"]
+    for size in [16, 24, 32, 48, 256]:
+        assert (size, size) in sizes
+
+
 def test_starts_empty(window):
     assert window.files() == []
 

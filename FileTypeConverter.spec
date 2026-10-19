@@ -1,11 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
+# PyInstaller's recipe for FileTypeConverter.exe. Build with:
+#     pyinstaller --noconfirm FileTypeConverter.spec
 
+ICON = 'src/file_converter/icon.ico'
 
 a = Analysis(
     ['launcher.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[(ICON, 'file_converter')],   # the window icon, next to gui.py inside the .exe
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,4 +38,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=ICON,                          # the .exe's own icon in File Explorer and the taskbar
 )

@@ -30,3 +30,7 @@ file-converter = "file_converter.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# non-Python files that belong to the package
+[tool.setuptools.package-data]
+file_converter = ["icon.ico"]
