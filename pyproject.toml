@@ -23,6 +23,7 @@ fconvert = "file_converter.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-qt>=4.4"]
+build = ["pyinstaller>=6.0"]
 
 [project.gui-scripts]
 file-converter = "file_converter.gui:main"

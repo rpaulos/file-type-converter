@@ -308,7 +308,7 @@ layout, spacing and wording.
       Python 3.10 and 3.12, `pip install -e ".[dev]"`, `pytest`
 - [X] Word tests will show as *skipped* in CI. That's expected, so run them locally before you push
 - [X] Add a CI status badge to the README
-- [ ] From now on, consider working on branches + pull requests so CI checks each change
+- [X] From now on, consider working on branches + pull requests so CI checks each change
 
 **Done when:** the Actions tab on GitHub shows a green check.
 
@@ -320,8 +320,8 @@ layout, spacing and wording.
 
 **Goal:** a downloadable `.exe` for people without Python.
 
-- [ ] `pip install pyinstaller`
-- [ ] Build: `pyinstaller --noconsole --onefile --name FileTypeConverter <entry script>`
+- [X] `pip install pyinstaller`
+- [X] Build: `pyinstaller --noconsole --onefile --name FileTypeConverter <entry script>`
       (PyInstaller needs a plain script entry point, not the `-m` package form)
 - [ ] Test the `.exe` on your machine, ideally also on a PC without Python
 - [ ] Check that `pywin32` got bundled: DOCX → PDF must still work from the `.exe`
